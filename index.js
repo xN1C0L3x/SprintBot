@@ -26,7 +26,7 @@ if (!token) {
 }
 
 // Erstellt eine neue Instanz des Bots (Clients)
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 // Es wird ausgegeben, dass der Bot läuft
 client.once('ready', () => {
@@ -48,7 +48,6 @@ client.on('interactionCreate', async interaction => {
 // Sprints erstellen
 const cron = require('node-cron');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 client.once('ready', () => {
   console.log(`Eingeloggt als ${client.user.tag}`);

@@ -65,7 +65,7 @@ client.once('ready', () => {
   });
 
   // Test
-  cron.schedule('40 21 * * 5', () => {
+  cron.schedule('0 22 * * 5', () => {
     startSprint('Freitag');
   });
 

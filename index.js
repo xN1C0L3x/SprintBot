@@ -57,25 +57,45 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 client.once('ready', () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
 
-  // Dienstags um 20:00 Uhr (Serverzeit) Sprint starten
-  cron.schedule('0 20 * * 2', async () => {
-    const channelId = 'DEINE_CHANNEL_ID_HIER'; // Channel für die Nachrichten
-    const channel = await client.channels.fetch(1230852093045379195);
+  const channelId = 'DEINE_CHANNEL_ID_HIER'; // Channel für die Nachrichten
 
-    if (!channel) {
-      console.log('Channel nicht gefunden!');
-      return;
+  // Funktion zum Starten eines Sprints
+  async function startSprint(day) {
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (!channel) {
+        console.log('Channel nicht gefunden!');
+        return;
+      }
+
+      // Sprint-Ankündigung
+      await channel.send(`🚀 Der Sprint startet jetzt am ${day} und läuft 30 Minuten! Viel Erfolg allen!`);
+
+      // 30 Minuten später Sprint beenden
+      setTimeout(async () => {
+        await channel.send('⏰ Der Sprint ist jetzt vorbei. Gut gemacht! 🎉');
+      }, 30 * 60 * 1000); // 30 Minuten in ms
+
+    } catch (error) {
+      console.error('Fehler beim Sprint:', error);
     }
+  }
 
-    // Sprint-Ankündigung
-    await channel.send('🚀 Der Sprint startet jetzt und läuft 30 Minuten! Viel Erfolg allen!');
-
-    // 30 Minuten später Sprint beenden
-    setTimeout(async () => {
-      await channel.send('⏰ Der Sprint ist jetzt vorbei. Gut gemacht! 🎉');
-    }, 30 * 60 * 1000); // 30 Minuten in ms
+  // Dienstags um 20:00 Uhr
+  cron.schedule('0 20 * * 2', () => {
+    startSprint('Dienstag');
   });
 
+   // Test 
+  cron.schedule('15 20 * * 5', () => {
+    startSprint('Dienstag');
+  });
+
+  // Donnerstags um 20:00 Uhr
+  cron.schedule('0 20 * * 4', () => {
+    startSprint('Donnerstag');
+  });
 });
 
 client.login(token);
+

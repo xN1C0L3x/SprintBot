@@ -44,12 +44,9 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// Meldet sich mit dem Token an
-client.login(token);
 
 // Sprints erstellen
 const cron = require('node-cron');
-const { Client, GatewayIntentBits } = require('discord.js');
 const { token } = require('./config.json');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
@@ -97,5 +94,6 @@ client.once('ready', () => {
   });
 });
 
+// Meldet sich mit dem Token an
 client.login(token);
 

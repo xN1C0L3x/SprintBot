@@ -28,27 +28,10 @@ if (!token) {
 // Erstellt eine neue Instanz des Bots (Clients)
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
-// Es wird ausgegeben, dass der Bot läuft
-client.once('ready', () => {
-  console.log(`Eingeloggt als ${client.user.tag}`);
-});
-
-// Event-Listener, der auf Slash-Befehle reagiert und ausführt
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  console.log(`Empfange Befehl: ${interaction.commandName}`);
-
-  if (interaction.commandName === 'ping') {
-    await interaction.reply('Pong!');
-  }
-});
-
-
 // Sprints erstellen
 const cron = require('node-cron');
 
-
+// Es wird ausgegeben, dass der Bot läuft und Cronjobs starten
 client.once('ready', () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
 
@@ -81,9 +64,9 @@ client.once('ready', () => {
     startSprint('Dienstag');
   });
 
-   // Test 
+  // Test
   cron.schedule('35 20 * * 5', () => {
-    startSprint('Dienstag');
+    startSprint('Freitag');
   });
 
   // Donnerstags um 20:00 Uhr
@@ -92,6 +75,16 @@ client.once('ready', () => {
   });
 });
 
+// Event-Listener, der auf Slash-Befehle reagiert und ausführt
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  console.log(`Empfange Befehl: ${interaction.commandName}`);
+
+  if (interaction.commandName === 'ping') {
+    await interaction.reply('Pong!');
+  }
+});
+
 // Meldet sich mit dem Token an
 client.login(token);
-

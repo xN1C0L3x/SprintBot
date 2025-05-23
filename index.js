@@ -47,7 +47,6 @@ client.on('interactionCreate', async interaction => {
 
 // Sprints erstellen
 const cron = require('node-cron');
-const token = process.env.DISCORD_TOKEN;
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 

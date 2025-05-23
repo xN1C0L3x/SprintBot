@@ -46,3 +46,36 @@ client.on('interactionCreate', async interaction => {
 
 // Meldet sich mit dem Token an
 client.login(token);
+
+// Sprints erstellen
+const cron = require('node-cron');
+const { Client, GatewayIntentBits } = require('discord.js');
+const { token } = require('./config.json');
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+
+client.once('ready', () => {
+  console.log(`Eingeloggt als ${client.user.tag}`);
+
+  // Dienstags um 20:00 Uhr (Serverzeit) Sprint starten
+  cron.schedule('0 20 * * 2', async () => {
+    const channelId = 'DEINE_CHANNEL_ID_HIER'; // Channel für die Nachrichten
+    const channel = await client.channels.fetch(1230852093045379195);
+
+    if (!channel) {
+      console.log('Channel nicht gefunden!');
+      return;
+    }
+
+    // Sprint-Ankündigung
+    await channel.send('🚀 Der Sprint startet jetzt und läuft 30 Minuten! Viel Erfolg allen!');
+
+    // 30 Minuten später Sprint beenden
+    setTimeout(async () => {
+      await channel.send('⏰ Der Sprint ist jetzt vorbei. Gut gemacht! 🎉');
+    }, 30 * 60 * 1000); // 30 Minuten in ms
+  });
+
+});
+
+client.login(token);

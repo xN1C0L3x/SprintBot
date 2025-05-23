@@ -64,11 +64,6 @@ client.once('ready', () => {
     startSprint('Dienstag');
   });
 
-  // Test
-  cron.schedule('0 22 * * 5', () => {
-    startSprint('Freitag');
-  });
-
   // Donnerstags um 20:00 Uhr
   cron.schedule('0 20 * * 4', () => {
     startSprint('Donnerstag');

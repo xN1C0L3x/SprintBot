@@ -68,6 +68,12 @@ client.once('ready', () => {
   cron.schedule('0 20 * * 4', () => {
     startSprint('Donnerstag');
   });
+
+  // test
+  cron.schedule('0 15 * * 7', () => {
+    startSprint('Sonntag');
+  });
+  
 });
 
 // Event-Listener, der auf Slash-Befehle reagiert und ausführt

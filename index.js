@@ -18,13 +18,6 @@ app.listen(PORT, () => {
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const cron = require('node-cron');
 
-// Holt den Token aus den Umgebungsvariablen (z.B. bei Render hinterlegt)
-const config = require('./config.json');
-
-const token = config.discordToken;
-const clientId = config.clientId;
-const guildId = config.guildId;
-const channelId = config.channelId;
 
 if (!token) {
   console.error('Fehler: Discord Token ist nicht gesetzt. Bitte Umgebungsvariable DISCORD_TOKEN anlegen.');

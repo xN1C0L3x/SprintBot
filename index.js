@@ -40,7 +40,7 @@ const cron = require('node-cron');
 const PREFIX = '!';
 
 // Channel ID für automatische Sprints (hier musst du deine Channel ID eintragen)
-const channelId = 'DEINE_CHANNEL_ID_HIER';
+const channelId = '1230852093045379195';
 
 // Sprint-Status
 let currentSprint = null; // null oder Objekt { endTime, participants, ended }
@@ -105,8 +105,9 @@ cron.schedule('0 20 * * 4', async () => {
 }, {
   timezone: 'Europe/Berlin'
 });
+  
  // Test am Sonntag um 15:00 Uhr deutscher Zeit
-cron.schedule('0 15 * * 0', async () => {
+cron.schedule('15 15 * * 0', async () => {
   const channel = await client.channels.fetch(channelId);
   if (channel) startSprint(channel, 30, 'Sonntag');
 }, {

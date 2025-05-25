@@ -63,7 +63,7 @@ async function startSprint(channel, minutes = 30, dayName = '') {
     ended: false
   };
 
-  await channel.send(`🚀 Der Sprint startet jetzt${dayName ? ' am ' + dayName : ''} und läuft ${minutes} Minuten! Nutzte `/join <startwortanzahl>` zum Mitmachen.`);
+  await channel.send(`🚀 Der Sprint startet jetzt${dayName ? ' am ' + dayName : ''} und läuft ${minutes} Minuten! Nutzte \`/join <startwortanzahl>\` zum Mitmachen.`);
 
   setTimeout(async () => {
     if (!currentSprint) return;

@@ -15,14 +15,24 @@ app.listen(PORT, () => {
 });
 
 // Importiert die benötigten Klassen aus discord.js
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const cron = require('node-cron');
 
 // Holt den Token aus den Umgebungsvariablen (z.B. bei Render hinterlegt)
 const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.CLIENT_ID; // Client-ID deines Bots aus Discord Dev Portal
+const guildId = process.env.GUILD_ID;   // Deine Server-ID für lokale Slash-Befehle
 
 if (!token) {
   console.error('Fehler: Discord Token ist nicht gesetzt. Bitte Umgebungsvariable DISCORD_TOKEN anlegen.');
   process.exit(1);
+}
+if (!clientId) {
+  console.error('Fehler: Client ID ist nicht gesetzt. Bitte Umgebungsvariable CLIENT_ID anlegen.');
+  process.exit(1);
+}
+if (!guildId) {
+  console.error('Warnung: GUILD_ID nicht gesetzt. Slash-Befehle werden global registriert (kann bis zu 1 Stunde dauern).');
 }
 
 // Erstellt eine neue Instanz des Bots (Clients)
@@ -34,8 +44,8 @@ const client = new Client({
   ]
 });
 
-// Sprints erstellen
-const cron = require('node-cron');
+// REST-Client für Slash-Befehle
+const rest = new REST({ version: '10' }).setToken(token);
 
 const PREFIX = '!';
 
@@ -58,12 +68,12 @@ async function startSprint(channel, minutes = 30, dayName = '') {
     ended: false
   };
 
-  await channel.send(`🚀 Der Sprint startet jetzt${dayName ? ' am ' + dayName : ''} und läuft ${minutes} Minuten! Nutzt \`!join <Startwortanzahl>\` zum Mitmachen.`);
+  await channel.send(`🚀 Der Sprint startet jetzt${dayName ? ' am ' + dayName : ''} und läuft ${minutes} Minuten! Nutzt \`!join <Startwortanzahl>\` oder \`/join <startwortanzahl>\` zum Mitmachen.`);
 
   // Sprint Ende nach der Zeit
   setTimeout(async () => {
     currentSprint.ended = true;
-    await channel.send('⏰ Der Sprint ist vorbei! Jetzt könnt ihr eure Endwortzahl mit `!wc <Endwortanzahl>` eingeben. Ihr habt 2 Minuten Zeit.');
+    await channel.send('⏰ Der Sprint ist vorbei! Jetzt könnt ihr eure Endwortzahl mit `!wc <Endwortanzahl>` oder `/wc <endwortanzahl>` eingeben. Ihr habt 2 Minuten Zeit.');
 
     // Nach 2 Minuten Sprint abschließen & Ergebnisse senden
     setTimeout(async () => {
@@ -82,8 +92,62 @@ async function startSprint(channel, minutes = 30, dayName = '') {
   }, minutes * 60000);
 }
 
-client.once('ready', () => {
+// Registriert Slash-Befehle beim Start
+client.once('ready', async () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
+
+  const commands = [
+    new SlashCommandBuilder()
+      .setName('ping')
+      .setDescription('Antwortet mit Pong!'),
+
+    new SlashCommandBuilder()
+      .setName('sprint')
+      .setDescription('Startet einen Sprint')
+      .addIntegerOption(option =>
+        option.setName('minuten')
+          .setDescription('Dauer des Sprints in Minuten')
+          .setRequired(false)),
+
+    new SlashCommandBuilder()
+      .setName('join')
+      .setDescription('Tritt einem laufenden Sprint bei')
+      .addIntegerOption(option =>
+        option.setName('startwortanzahl')
+          .setDescription('Startwortanzahl')
+          .setRequired(true)),
+
+    new SlashCommandBuilder()
+      .setName('wc')
+      .setDescription('Gibt die Endwortanzahl nach dem Sprint ein')
+      .addIntegerOption(option =>
+        option.setName('endwortanzahl')
+          .setDescription('Endwortanzahl')
+          .setRequired(true)),
+
+    new SlashCommandBuilder()
+      .setName('cancel')
+      .setDescription('Bricht den aktuellen Sprint ab'),
+  ].map(command => command.toJSON());
+
+  try {
+    console.log('Slash-Befehle werden registriert...');
+    if (guildId) {
+      await rest.put(
+        Routes.applicationGuildCommands(clientId, guildId),
+        { body: commands },
+      );
+      console.log('Slash-Befehle lokal registriert.');
+    } else {
+      await rest.put(
+        Routes.applicationCommands(clientId),
+        { body: commands },
+      );
+      console.log('Slash-Befehle global registriert (Dauert bis zu 1 Stunde).');
+    }
+  } catch (error) {
+    console.error('Fehler bei Slash-Befehle-Registrierung:', error);
+  }
 
   // Cronjobs für automatische Sprints
   if (!channelId || channelId === 'DEINE_CHANNEL_ID_HIER') {
@@ -91,31 +155,31 @@ client.once('ready', () => {
   }
 
   // Dienstags um 20:00 Uhr deutscher Zeit
-cron.schedule('0 20 * * 2', async () => {
-  const channel = await client.channels.fetch(channelId);
-  if (channel) startSprint(channel, 30, 'Dienstag');
-}, {
-  timezone: 'Europe/Berlin'
+  cron.schedule('0 20 * * 2', async () => {
+    const channel = await client.channels.fetch(channelId);
+    if (channel) startSprint(channel, 30, 'Dienstag');
+  }, {
+    timezone: 'Europe/Berlin'
+  });
+
+  // Donnerstags um 20:00 Uhr deutscher Zeit
+  cron.schedule('0 20 * * 4', async () => {
+    const channel = await client.channels.fetch(channelId);
+    if (channel) startSprint(channel, 30, 'Donnerstag');
+  }, {
+    timezone: 'Europe/Berlin'
+  });
+
+  // Test am Sonntag um 15:00 Uhr deutscher Zeit
+  cron.schedule('15 15 * * 0', async () => {
+    const channel = await client.channels.fetch(channelId);
+    if (channel) startSprint(channel, 30, 'Sonntag');
+  }, {
+    timezone: 'Europe/Berlin'
+  });
 });
 
- // Donnerstags um 20:00 Uhr deutscher Zeit
-cron.schedule('0 20 * * 4', async () => {
-  const channel = await client.channels.fetch(channelId);
-  if (channel) startSprint(channel, 30, 'Donnerstag');
-}, {
-  timezone: 'Europe/Berlin'
-});
-  
- // Test am Sonntag um 15:00 Uhr deutscher Zeit
-cron.schedule('15 15 * * 0', async () => {
-  const channel = await client.channels.fetch(channelId);
-  if (channel) startSprint(channel, 30, 'Sonntag');
-}, {
-  timezone: 'Europe/Berlin'
-});
-});
-
-// Event-Listener für Nachrichten, um Commands zu verarbeiten
+// Event-Listener für Nachrichten, um !Commands zu verarbeiten
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
   if (!message.content.startsWith(PREFIX)) return;
@@ -127,13 +191,11 @@ client.on('messageCreate', async message => {
     return message.channel.send('Pong!');
   }
 
-  // Sprint starten manuell: !sprint [minuten]
   if (command === 'sprint') {
     const minutes = parseInt(args[0]) || 30;
     await startSprint(message.channel, minutes);
   }
 
-  // Mit Sprint joinen: !join <startwortanzahl>
   else if (command === 'join') {
     if (!currentSprint || currentSprint.ended) {
       return message.channel.send('❌ Es läuft kein aktiver Sprint.');
@@ -152,7 +214,6 @@ client.on('messageCreate', async message => {
     return message.channel.send(`<@${message.author.id}> ist dem Sprint mit ${startCount} Wörtern beigetreten!`);
   }
 
-  // Wortanzahl nach Sprint eingeben: !wc <endwortanzahl>
   else if (command === 'wc') {
     if (!currentSprint || !currentSprint.ended) {
       return message.channel.send('❌ Du kannst deine Endwortanzahl erst nach dem Sprint eingeben.');
@@ -171,7 +232,6 @@ client.on('messageCreate', async message => {
     return message.channel.send(`<@${message.author.id}> hat ${endCount} Wörter eingetragen.`);
   }
 
-  // Sprint abbrechen: !cancel
   else if (command === 'cancel') {
     if (!currentSprint) {
       return message.channel.send('❌ Es läuft kein Sprint zum Abbrechen.');
@@ -182,16 +242,60 @@ client.on('messageCreate', async message => {
   }
 });
 
-// Event-Listener, der auf Slash-Befehle reagiert und ausführt (dein bestehender ping-Befehl)
+// Event-Listener für Slash-Commands
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  console.log(`Empfange Befehl: ${interaction.commandName}`);
+  const { commandName } = interaction;
 
-  if (interaction.commandName === 'ping') {
+  if (commandName === 'ping') {
     await interaction.reply('Pong!');
+  }
+
+  else if (commandName === 'sprint') {
+    const minutes = interaction.options.getInteger('minuten') || 30;
+    const channel = interaction.channel;
+    await startSprint(channel, minutes);
+    await interaction.reply(`🚀 Sprint wurde für ${minutes} Minuten gestartet.`);
+  }
+
+  else if (commandName === 'join') {
+    if (!currentSprint || currentSprint.ended) {
+      await interaction.reply({ content: '❌ Es läuft kein aktiver Sprint.', ephemeral: true });
+      return;
+    }
+    const startCount = interaction.options.getInteger('startwortanzahl');
+    currentSprint.participants[interaction.user.id] = {
+      start: startCount,
+      end: null
+    };
+    await interaction.reply(`<@${interaction.user.id}> ist dem Sprint mit ${startCount} Wörtern beigetreten!`);
+  }
+
+  else if (commandName === 'wc') {
+    if (!currentSprint || !currentSprint.ended) {
+      await interaction.reply({ content: '❌ Du kannst deine Endwortanzahl erst nach dem Sprint eingeben.', ephemeral: true });
+      return;
+    }
+    if (!currentSprint.participants[interaction.user.id]) {
+      await interaction.reply({ content: '❌ Du hast nicht am Sprint teilgenommen.', ephemeral: true });
+      return;
+    }
+    const endCount = interaction.options.getInteger('endwortanzahl');
+    currentSprint.participants[interaction.user.id].end = endCount;
+    await interaction.reply(`<@${interaction.user.id}> hat ${endCount} Wörter eingetragen.`);
+  }
+
+  else if (commandName === 'cancel') {
+    if (!currentSprint) {
+      await interaction.reply({ content: '❌ Es läuft kein Sprint zum Abbrechen.', ephemeral: true });
+      return;
+    }
+    currentSprint = null;
+    await interaction.reply('Der Sprint wurde abgebrochen.');
   }
 });
 
 // Meldet sich mit dem Token an
 client.login(token);
+

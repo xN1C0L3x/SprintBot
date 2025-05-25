@@ -26,57 +26,162 @@ if (!token) {
 }
 
 // Erstellt eine neue Instanz des Bots (Clients)
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent // wichtig für Text-Commands
+  ]
+});
 
 // Sprints erstellen
 const cron = require('node-cron');
 
-// Es wird ausgegeben, dass der Bot läuft und Cronjobs starten
+const PREFIX = '!';
+
+// Channel ID für automatische Sprints (hier musst du deine Channel ID eintragen)
+const channelId = 'DEINE_CHANNEL_ID_HIER';
+
+// Sprint-Status
+let currentSprint = null; // null oder Objekt { endTime, participants, ended }
+
+// Funktion Sprint starten (manuell oder automatisch)
+async function startSprint(channel, minutes = 30, dayName = '') {
+  if (currentSprint && !currentSprint.ended) {
+    await channel.send('⚠️ Ein Sprint läuft bereits!');
+    return;
+  }
+
+  currentSprint = {
+    endTime: Date.now() + minutes * 60000,
+    participants: {}, // userId: { start: number, end: number|null }
+    ended: false
+  };
+
+  await channel.send(`🚀 Der Sprint startet jetzt${dayName ? ' am ' + dayName : ''} und läuft ${minutes} Minuten! Nutzt \`!join <Startwortanzahl>\` zum Mitmachen.`);
+
+  // Sprint Ende nach der Zeit
+  setTimeout(async () => {
+    currentSprint.ended = true;
+    await channel.send('⏰ Der Sprint ist vorbei! Jetzt könnt ihr eure Endwortzahl mit `!wc <Endwortanzahl>` eingeben. Ihr habt 2 Minuten Zeit.');
+
+    // Nach 2 Minuten Sprint abschließen & Ergebnisse senden
+    setTimeout(async () => {
+      let results = '🏁 Sprint-Ergebnisse:\n';
+      for (const [userId, data] of Object.entries(currentSprint.participants)) {
+        if (data.end !== null && typeof data.start === 'number') {
+          const diff = data.end - data.start;
+          results += `<@${userId}> hat ${diff} Wörter geschrieben.\n`;
+        } else {
+          results += `<@${userId}> hat keine Endwortanzahl angegeben.\n`;
+        }
+      }
+      await channel.send(results);
+      currentSprint = null;
+    }, 2 * 60 * 1000); // 2 Minuten
+  }, minutes * 60000);
+}
+
 client.once('ready', () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
 
-  const channelId = 'DEINE_CHANNEL_ID_HIER'; // Channel für die Nachrichten
-
-  // Funktion zum Starten eines Sprints
-  async function startSprint(day) {
-    try {
-      const channel = await client.channels.fetch(channelId);
-      if (!channel) {
-        console.log('Channel nicht gefunden!');
-        return;
-      }
-
-      // Sprint-Ankündigung
-      await channel.send(`🚀 Der Sprint startet jetzt am ${day} und läuft 30 Minuten! Viel Erfolg allen!`);
-
-      // 30 Minuten später Sprint beenden
-      setTimeout(async () => {
-        await channel.send('⏰ Der Sprint ist jetzt vorbei. Gut gemacht! 🎉');
-      }, 30 * 60 * 1000); // 30 Minuten in ms
-
-    } catch (error) {
-      console.error('Fehler beim Sprint:', error);
-    }
+  // Cronjobs für automatische Sprints
+  if (!channelId || channelId === 'DEINE_CHANNEL_ID_HIER') {
+    console.warn('WARNUNG: Du musst die Channel ID in "channelId" im Code eintragen, um automatische Sprints zu nutzen.');
   }
 
-  // Dienstags um 20:00 Uhr
-  cron.schedule('0 20 * * 2', () => {
-    startSprint('Dienstag');
-  });
-
-  // Donnerstags um 20:00 Uhr
-  cron.schedule('0 20 * * 4', () => {
-    startSprint('Donnerstag');
-  });
-
-  // test
-  cron.schedule('0 15 * * 7', () => {
-    startSprint('Sonntag');
-  });
-  
+  // Dienstags um 20:00 Uhr deutscher Zeit
+cron.schedule('0 20 * * 2', async () => {
+  const channel = await client.channels.fetch(channelId);
+  if (channel) startSprint(channel, 30, 'Dienstag');
+}, {
+  timezone: 'Europe/Berlin'
 });
 
-// Event-Listener, der auf Slash-Befehle reagiert und ausführt
+ // Donnerstags um 20:00 Uhr deutscher Zeit
+cron.schedule('0 20 * * 4', async () => {
+  const channel = await client.channels.fetch(channelId);
+  if (channel) startSprint(channel, 30, 'Donnerstag');
+}, {
+  timezone: 'Europe/Berlin'
+});
+ // Test am Sonntag um 15:00 Uhr deutscher Zeit
+cron.schedule('0 15 * * 0', async () => {
+  const channel = await client.channels.fetch(channelId);
+  if (channel) startSprint(channel, 30, 'Sonntag');
+}, {
+  timezone: 'Europe/Berlin'
+});
+});
+
+// Event-Listener für Nachrichten, um Commands zu verarbeiten
+client.on('messageCreate', async message => {
+  if (message.author.bot) return;
+  if (!message.content.startsWith(PREFIX)) return;
+
+  const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
+  const command = args.shift().toLowerCase();
+
+  if (command === 'ping') {
+    return message.channel.send('Pong!');
+  }
+
+  // Sprint starten manuell: !sprint [minuten]
+  if (command === 'sprint') {
+    const minutes = parseInt(args[0]) || 30;
+    await startSprint(message.channel, minutes);
+  }
+
+  // Mit Sprint joinen: !join <startwortanzahl>
+  else if (command === 'join') {
+    if (!currentSprint || currentSprint.ended) {
+      return message.channel.send('❌ Es läuft kein aktiver Sprint.');
+    }
+
+    const startCount = parseInt(args[0]);
+    if (isNaN(startCount) || startCount < 0) {
+      return message.channel.send('Bitte gib eine gültige Startwortanzahl an. Beispiel: `!join 100`');
+    }
+
+    currentSprint.participants[message.author.id] = {
+      start: startCount,
+      end: null
+    };
+
+    return message.channel.send(`<@${message.author.id}> ist dem Sprint mit ${startCount} Wörtern beigetreten!`);
+  }
+
+  // Wortanzahl nach Sprint eingeben: !wc <endwortanzahl>
+  else if (command === 'wc') {
+    if (!currentSprint || !currentSprint.ended) {
+      return message.channel.send('❌ Du kannst deine Endwortanzahl erst nach dem Sprint eingeben.');
+    }
+
+    if (!currentSprint.participants[message.author.id]) {
+      return message.channel.send('❌ Du hast nicht am Sprint teilgenommen.');
+    }
+
+    const endCount = parseInt(args[0]);
+    if (isNaN(endCount) || endCount < 0) {
+      return message.channel.send('Bitte gib eine gültige Endwortanzahl an. Beispiel: `!wc 350`');
+    }
+
+    currentSprint.participants[message.author.id].end = endCount;
+    return message.channel.send(`<@${message.author.id}> hat ${endCount} Wörter eingetragen.`);
+  }
+
+  // Sprint abbrechen: !cancel
+  else if (command === 'cancel') {
+    if (!currentSprint) {
+      return message.channel.send('❌ Es läuft kein Sprint zum Abbrechen.');
+    }
+
+    currentSprint = null;
+    return message.channel.send('Der Sprint wurde abgebrochen.');
+  }
+});
+
+// Event-Listener, der auf Slash-Befehle reagiert und ausführt (dein bestehender ping-Befehl)
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 

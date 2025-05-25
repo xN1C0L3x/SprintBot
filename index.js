@@ -63,12 +63,12 @@ async function startSprint(channel, minutes = 30, dayName = '') {
     ended: false
   };
 
-  await channel.send(`🚀 Der Sprint startet jetzt${dayName ? ' am ' + dayName : ''} und läuft ${minutes} Minuten! Nutzt \`!join <Startwortanzahl>\` oder \`/join <startwortanzahl>\` zum Mitmachen.`);
+  await channel.send(`🚀 Der Sprint startet jetzt${dayName ? ' am ' + dayName : ''} und läuft ${minutes} Minuten! Nutzte `/join <startwortanzahl>` zum Mitmachen.`);
 
   setTimeout(async () => {
     if (!currentSprint) return;
     currentSprint.ended = true;
-    await channel.send('⏰ Der Sprint ist vorbei! Jetzt könnt ihr eure Endwortzahl mit `!wc <Endwortanzahl>` oder `/wc <endwortanzahl>` eingeben. Ihr habt 2 Minuten Zeit.');
+    await channel.send('⏰ Der Sprint ist vorbei! Jetzt könnt ihr eure Endwortzahl mit `/wc <endwortanzahl>` eingeben. Ihr habt 2 Minuten Zeit.');
 
     setTimeout(async () => {
       if (!currentSprint) return;
@@ -112,20 +112,16 @@ client.once('ready', async () => {
   }
 
   // Cron-Jobs für automatische Sprints (deutsche Zeit)
-  cron.schedule('0 20 * * 2', async () => {
+  cron.schedule('30 20 * * 2', async () => {
     const channel = await client.channels.fetch(channelId);
     if (channel) startSprint(channel, 30, 'Dienstag');
   }, { timezone: 'Europe/Berlin' });
 
-  cron.schedule('0 20 * * 4', async () => {
+  cron.schedule('30 20 * * 4', async () => {
     const channel = await client.channels.fetch(channelId);
     if (channel) startSprint(channel, 30, 'Donnerstag');
   }, { timezone: 'Europe/Berlin' });
 
-  cron.schedule('15 15 * * 0', async () => {
-    const channel = await client.channels.fetch(channelId);
-    if (channel) startSprint(channel, 30, 'Sonntag');
-  }, { timezone: 'Europe/Berlin' });
 });
 
 // Message-Handler für Text-Kommandos (!)

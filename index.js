@@ -20,6 +20,7 @@ const cron = require('node-cron');
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID || null;
 
 
 if (!token) {

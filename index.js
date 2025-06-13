@@ -95,7 +95,7 @@ client.once('ready', async () => {
     new SlashCommandBuilder().setName('ping').setDescription('Antwortet mit Pong!'),
     new SlashCommandBuilder().setName('sprint').setDescription('Startet einen Sprint').addIntegerOption(opt => opt.setName('minuten').setDescription('Dauer in Minuten').setRequired(false)),
     new SlashCommandBuilder().setName('join').setDescription('Tritt einem Sprint bei').addIntegerOption(opt => opt.setName('startwortanzahl').setDescription('Startwortanzahl').setRequired(true)),
-    new SlashCommandBuilder().setName('word').setDescription('Endwortanzahl eingeben').addIntegerOption(opt => opt.setName('endwortanzahl').setDescription('Endwortanzahl').setRequired(true)),
+    new SlashCommandBuilder().setName('wc').setDescription('Endwortanzahl eingeben').addIntegerOption(opt => opt.setName('endwortanzahl').setDescription('Endwortanzahl').setRequired(true)),
     new SlashCommandBuilder().setName('cancel').setDescription('Sprint abbrechen')
   ].map(cmd => cmd.toJSON());
 
